@@ -53,6 +53,28 @@ int main() {
             case Direction::None:  break;
         }
 
+        // --- НОВЫЙ БЛОК: ПРОВЕРКА ГРАНИЦ ОКНА ---
+
+        // Проверка по горизонтали (ось X)
+        if (snakeX + GameConfig::TILE_SIZE < 0) {
+            // Если змейка полностью ушла за левый край, появляемся у правого
+            snakeX = GameConfig::WINDOW_WIDTH; 
+        } else if (snakeX > GameConfig::WINDOW_WIDTH) {
+            // Если змейка начала выходить за правый край, появляемся у левого
+            snakeX = -GameConfig::TILE_SIZE;
+        }
+
+        // Проверка по вертикали (ось Y)
+        if (snakeY + GameConfig::TILE_SIZE < 0) {
+            // Если змейка полностью ушла за верхний край, появляемся у нижнего
+            snakeY = GameConfig::WINDOW_HEIGHT;
+        } else if (snakeY > GameConfig::WINDOW_HEIGHT) {
+            // Если змейка начала выходить за нижний край, появляемся у верхнего
+            snakeY = -GameConfig::TILE_SIZE;
+        }
+
+        // --- КОНЕЦ НОВОГО БЛОКА ---
+
         // --- ОТРИСОВКА (без изменений) ---
         window.clear();
         renderer.drawSnake(snakeX, snakeY);
