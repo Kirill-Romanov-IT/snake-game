@@ -10,4 +10,8 @@ target_link_libraries(SnakeGame PRIVATE
     GameLogic
     Renderer
     Input
+    Window 
 )
+
+# Вызываем нашу новую функцию для цели SnakeGame
+copy_sfml_dlls_to_target(SnakeGame)
