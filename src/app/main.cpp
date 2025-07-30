@@ -1,40 +1,41 @@
 #include <Window/GameWindow.h>
-#include <SFML/Window/Event.hpp> // Нам нужен доступ к sf::Event для цикла
+#include <Renderer/SfmlRenderer.h>
+#include <GameLogic/Constants.h>
+#include <SFML/Window/Event.hpp>
+
+// Убираем зависимость от SFML/System/Vector2f.hpp
+// #include <SFML/System/Vector2f.hpp> 
 
 #include <iostream>
 
 int main() {
-    const unsigned int WINDOW_WIDTH = 800;
-    const unsigned int WINDOW_HEIGHT = 600;
-    const std::string WINDOW_TITLE = "Snake Game";
+    GameWindow window(GameConfig::WINDOW_WIDTH, GameConfig::WINDOW_HEIGHT, "Snake Game");
+    SfmlRenderer renderer(window);
 
-    // Создаем окно через нашу библиотеку-обертку
-    GameWindow window(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE);
+    // Используем простые переменные для координат
+    float snakeX = 100.f;
+    float snakeY = 100.f;
+    float foodX = 300.f;
+    float foodY = 300.f;
     
-    std::cout << "Window created. Starting main loop..." << std::endl;
-
-    // Главный цикл приложения
     while (window.isOpen()) {
         sf::Event event;
-        // Обрабатываем все события в очереди
         while (window.pollEvent(event)) {
-            // Если было запрошено закрытие окна (нажат крестик)
             if (event.type == sf::Event::Closed) {
                 window.close();
             }
         }
 
-        // Очистка
+        snakeX += 0.05f; // Или даже быстрее, чтобы было заметно: snakeX += 0.1f;
+
         window.clear();
 
-        // Отрисовка (пока ничего не рисуем)
-        // ...
+        // Передаем простые float в наши методы отрисовки
+        renderer.drawSnake(snakeX, snakeY);
+        renderer.drawFood(foodX, foodY);
 
-        // Отображение кадра
         window.display();
     }
-
-    std::cout << "Window closed. Exiting." << std::endl;
 
     return 0;
 }
