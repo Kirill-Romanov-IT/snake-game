@@ -5,6 +5,10 @@ add_library(GameLogic STATIC
     # Добавьте сюда новые .cpp файлы из GameLogic, если они появятся
 )
 
+
+
 target_include_directories(GameLogic PUBLIC 
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
+
+target_link_libraries(GameLogic PUBLIC sfml-system)
