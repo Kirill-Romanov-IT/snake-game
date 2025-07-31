@@ -4,7 +4,7 @@
 #include <GameLogic/Constants.h>
 #include <GameLogic/Direction.h>
 #include <vector>
-#include <SFML/System/Vector2i.hpp>
+#include <SFML/System/Vector2.hpp>
 
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Clock.hpp> // <-- Включаем таймер

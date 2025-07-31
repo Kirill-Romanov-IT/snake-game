@@ -8,9 +8,11 @@ add_executable(SnakeGame
 # потому что мы использовали `target_include_directories` с опцией PUBLIC.
 target_link_libraries(SnakeGame PRIVATE
     GameLogic
+    Window
     Renderer
     Input
-    Window 
+    sfml-graphics
+
 
     
 )
