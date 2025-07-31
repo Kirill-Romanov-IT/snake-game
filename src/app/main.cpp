@@ -5,6 +5,7 @@
 #include <GameLogic/Direction.h>
 #include <vector>
 #include <SFML/System/Vector2.hpp>
+#include <random>
 
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Clock.hpp> // <-- Включаем таймер
@@ -34,8 +35,23 @@ int main() {
 
     Direction currentDirection = Direction::Right;
 
-    float foodX = 300.f;
-    float foodY = 300.f;
+  // Внутри main()
+
+// УДАЛИТЕ ЭТИ СТРОКИ:
+// float foodX = 300.f;
+// float foodY = 300.f;
+
+// ДОБАВЬТЕ ЭТИ СТРОКИ:
+const int gridWidth = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE;
+const int gridHeight = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE;
+
+// Генератор случайных чисел для новой позиции еды
+std::random_device rd;
+std::mt19937 randomEngine(rd());
+std::uniform_int_distribution<int> distX(0, gridWidth - 1);
+std::uniform_int_distribution<int> distY(0, gridHeight - 1);
+
+sf::Vector2i foodPosition = {distX(randomEngine), distY(randomEngine)};
     
     while (window.isOpen()) {
         // --- В НАЧАЛЕ ЦИКЛА ОБНОВЛЯЕМ DELTA TIME ---
@@ -76,11 +92,26 @@ if (timeSinceLastMove >= timePerMove) {
         case Direction::None:  break;
     }
 
-    // 3. Добавляем новую голову в начало змеи
-    snakeBody.insert(snakeBody.begin(), newHeadPosition);
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// 3. Добавляем новую голову в начало змеи
+snakeBody.insert(snakeBody.begin(), newHeadPosition);
 
-    // 4. Удаляем хвост
+// 4. Проверяем, съели ли мы еду
+if (newHeadPosition == foodPosition) {
+    // Еда съедена!
+    // Хвост не удаляем, змея выросла.
+    // Генерируем новую позицию для еды.
+    // Нужно убедиться, что еда не появится на теле змеи.
+    do {
+        foodPosition = {distX(randomEngine), distY(randomEngine)};
+    } while (std::find(snakeBody.begin(), snakeBody.end(), foodPosition) != snakeBody.end());
+
+} else {
+    // Еду не съели, просто движемся.
+    // Удаляем хвост.
     snakeBody.pop_back();
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 }
 
@@ -106,20 +137,20 @@ if (head.y < 0) {
 }
 // --- КОНЕЦ НОВОГО БЛОКА ---
 
-        // --- ОТРИСОВКА ---
+       // --- ОТРИСОВКА ---
 window.clear();
-// renderer.drawSnake(snakeX, snakeY); // Удаляем старый вызов
-// renderer.drawFood(foodX, foodY);
 
-// Рисуем каждый сегмент змеи
+// Рисуем каждый сегмент змеи (без изменений)
 for (const auto& segment : snakeBody) {
-    // Преобразуем координаты сетки в пиксельные координаты
     float posX = segment.x * GameConfig::TILE_SIZE;
     float posY = segment.y * GameConfig::TILE_SIZE;
     renderer.drawSnake(posX, posY);
 }
-// Еду пока оставим на месте
-renderer.drawFood(foodX, foodY);
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Рисуем еду по ее координатам на сетке
+renderer.drawFood(foodPosition.x * GameConfig::TILE_SIZE, foodPosition.y * GameConfig::TILE_SIZE);
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 window.display();
     }
