@@ -11,6 +11,8 @@ target_link_libraries(SnakeGame PRIVATE
     Renderer
     Input
     Window 
+
+    
 )
 
 # Вызываем нашу новую функцию для цели SnakeGame

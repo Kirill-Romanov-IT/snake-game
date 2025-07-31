@@ -3,6 +3,8 @@
 #include <Input/SfmlInput.h>
 #include <GameLogic/Constants.h>
 #include <GameLogic/Direction.h>
+#include <vector>
+#include <SFML/System/Vector2i.hpp>
 
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Clock.hpp> // <-- Включаем таймер
@@ -16,11 +18,20 @@ int main() {
     sf::Clock clock; // Создаем и запускаем таймер
     float deltaTime = 0.f;
 
-    // Скорость теперь измеряется в "пикселях В СЕКУНДУ"
-    const float snakeSpeed = 100.0f; 
+    const float timePerMove = 0.2f;
+    float timeSinceLastMove = 0.0f;
 
-    float snakeX = 100.f;
-    float snakeY = 100.f;
+    int startX = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE / 2;
+    int startY = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE / 2;
+
+    // Создаем тело змеи. Первый элемент - голова.
+    std::vector<sf::Vector2i> snakeBody;
+    snakeBody.push_back({startX, startY});      // Голова
+    snakeBody.push_back({startX - 1, startY});  // Сегмент тела
+    snakeBody.push_back({startX - 2, startY});  // Хвост
+    
+
+
     Direction currentDirection = Direction::Right;
 
     float foodX = 300.f;
@@ -43,43 +54,74 @@ int main() {
             }
         }
 
-        // --- ОБНОВЛЕНИЕ ЛОГИКИ С УЧЕТОМ DELTA TIME ---
-        // Теперь мы умножаем скорость на время, прошедшее с прошлого кадра
-        switch (currentDirection) {
-            case Direction::Up:    snakeY -= snakeSpeed * deltaTime; break;
-            case Direction::Down:  snakeY += snakeSpeed * deltaTime; break;
-            case Direction::Left:  snakeX -= snakeSpeed * deltaTime; break;
-            case Direction::Right: snakeX += snakeSpeed * deltaTime; break;
-            case Direction::None:  break;
-        }
+        // --- ОБНОВЛЕНИЕ ЛОГИКИ ПО СЕТКЕ ---
+// 1. Накапливаем время, прошедшее с прошлого кадра
+timeSinceLastMove += deltaTime;
 
-        // --- НОВЫЙ БЛОК: ПРОВЕРКА ГРАНИЦ ОКНА ---
+// 2. Проверяем, достаточно ли времени накопилось для следующего хода
+if (timeSinceLastMove >= timePerMove) {
+    // Времени достаточно, делаем ход!
 
-        // Проверка по горизонтали (ось X)
-        if (snakeX + GameConfig::TILE_SIZE < 0) {
-            // Если змейка полностью ушла за левый край, появляемся у правого
-            snakeX = GameConfig::WINDOW_WIDTH; 
-        } else if (snakeX > GameConfig::WINDOW_WIDTH) {
-            // Если змейка начала выходить за правый край, появляемся у левого
-            snakeX = -GameConfig::TILE_SIZE;
-        }
+    // Сбрасываем счетчик (вычитаем время одного хода)
+    timeSinceLastMove -= timePerMove;
 
-        // Проверка по вертикали (ось Y)
-        if (snakeY + GameConfig::TILE_SIZE < 0) {
-            // Если змейка полностью ушла за верхний край, появляемся у нижнего
-            snakeY = GameConfig::WINDOW_HEIGHT;
-        } else if (snakeY > GameConfig::WINDOW_HEIGHT) {
-            // Если змейка начала выходить за нижний край, появляемся у верхнего
-            snakeY = -GameConfig::TILE_SIZE;
-        }
+    sf::Vector2i newHeadPosition = snakeBody.front(); 
 
-        // --- КОНЕЦ НОВОГО БЛОКА ---
+    // 2. Смещаем новую голову на одну клетку в нужном направлении
+    switch (currentDirection) {
+        case Direction::Up:    newHeadPosition.y -= 1; break;
+        case Direction::Down:  newHeadPosition.y += 1; break;
+        case Direction::Left:  newHeadPosition.x -= 1; break;
+        case Direction::Right: newHeadPosition.x += 1; break;
+        case Direction::None:  break;
+    }
 
-        // --- ОТРИСОВКА (без изменений) ---
-        window.clear();
-        renderer.drawSnake(snakeX, snakeY);
-        renderer.drawFood(foodX, foodY);
-        window.display();
+    // 3. Добавляем новую голову в начало змеи
+    snakeBody.insert(snakeBody.begin(), newHeadPosition);
+
+    // 4. Удаляем хвост
+    snakeBody.pop_back();
+
+}
+
+        // --- ВСТАВЬТЕ ЭТОТ БЛОК ---
+// --- ПРОВЕРКА ГРАНИЦ ОКНА ---
+sf::Vector2i& head = snakeBody.front(); // Получаем ссылку на голову, чтобы ее можно было изменить
+
+// Вычисляем размеры нашей сетки в клетках
+const int gridWidth = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE;
+const int gridHeight = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE;
+
+// Проверяем и корректируем координаты головы
+if (head.x < 0) {
+    head.x = gridWidth - 1; // Если ушли влево, появляемся справа
+} else if (head.x >= gridWidth) {
+    head.x = 0; // Если ушли вправо, появляемся слева
+}
+
+if (head.y < 0) {
+    head.y = gridHeight - 1; // Если ушли вверх, появляемся снизу
+} else if (head.y >= gridHeight) {
+    head.y = 0; // Если ушли вниз, появляемся сверху
+}
+// --- КОНЕЦ НОВОГО БЛОКА ---
+
+        // --- ОТРИСОВКА ---
+window.clear();
+// renderer.drawSnake(snakeX, snakeY); // Удаляем старый вызов
+// renderer.drawFood(foodX, foodY);
+
+// Рисуем каждый сегмент змеи
+for (const auto& segment : snakeBody) {
+    // Преобразуем координаты сетки в пиксельные координаты
+    float posX = segment.x * GameConfig::TILE_SIZE;
+    float posY = segment.y * GameConfig::TILE_SIZE;
+    renderer.drawSnake(posX, posY);
+}
+// Еду пока оставим на месте
+renderer.drawFood(foodX, foodY);
+
+window.display();
     }
 
     return 0;
