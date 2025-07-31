@@ -9,6 +9,8 @@
 
 #include <SFML/Window/Event.hpp>
 #include <SFML/System/Clock.hpp> // <-- Включаем таймер
+#include <thread> // <-- Для std::this_thread::sleep_for
+#include <chrono> // <-- Для std::chrono::seconds
 #include <iostream>
 
 int main() {
@@ -35,15 +37,13 @@ int main() {
 
     Direction currentDirection = Direction::Right;
 
-  // Внутри main()
-
-// УДАЛИТЕ ЭТИ СТРОКИ:
-// float foodX = 300.f;
-// float foodY = 300.f;
+ 
 
 // ДОБАВЬТЕ ЭТИ СТРОКИ:
 const int gridWidth = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE;
 const int gridHeight = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE;
+
+bool isGameOver = false;
 
 // Генератор случайных чисел для новой позиции еды
 std::random_device rd;
@@ -70,72 +70,83 @@ sf::Vector2i foodPosition = {distX(randomEngine), distY(randomEngine)};
             }
         }
 
-        // --- ОБНОВЛЕНИЕ ЛОГИКИ ПО СЕТКЕ ---
-// 1. Накапливаем время, прошедшее с прошлого кадра
-timeSinceLastMove += deltaTime;
+        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+        // Обновляем логику, только если игра еще не окончена
+        if (!isGameOver) {
+            // --- ОБНОВЛЕНИЕ ЛОГИКИ ПО СЕТКЕ ---
+            // 1. Накапливаем время, прошедшее с прошлого кадра
+            timeSinceLastMove += deltaTime;
 
-// 2. Проверяем, достаточно ли времени накопилось для следующего хода
-if (timeSinceLastMove >= timePerMove) {
-    // Времени достаточно, делаем ход!
+            // 2. Проверяем, достаточно ли времени накопилось для следующего хода
+            if (timeSinceLastMove >= timePerMove) {
+                // Времени достаточно, делаем ход!
 
-    // Сбрасываем счетчик (вычитаем время одного хода)
-    timeSinceLastMove -= timePerMove;
+                // Сбрасываем счетчик (вычитаем время одного хода)
+                timeSinceLastMove -= timePerMove;
 
-    sf::Vector2i newHeadPosition = snakeBody.front(); 
+                sf::Vector2i newHeadPosition = snakeBody.front(); 
 
-    // 2. Смещаем новую голову на одну клетку в нужном направлении
-    switch (currentDirection) {
-        case Direction::Up:    newHeadPosition.y -= 1; break;
-        case Direction::Down:  newHeadPosition.y += 1; break;
-        case Direction::Left:  newHeadPosition.x -= 1; break;
-        case Direction::Right: newHeadPosition.x += 1; break;
-        case Direction::None:  break;
-    }
+                // 2. Смещаем новую голову на одну клетку в нужном направлении
+                switch (currentDirection) {
+                    case Direction::Up:    newHeadPosition.y -= 1; break;
+                    case Direction::Down:  newHeadPosition.y += 1; break;
+                    case Direction::Left:  newHeadPosition.x -= 1; break;
+                    case Direction::Right: newHeadPosition.x += 1; break;
+                    case Direction::None:  break;
+                }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// 3. Добавляем новую голову в начало змеи
-snakeBody.insert(snakeBody.begin(), newHeadPosition);
+                // 3. Добавляем новую голову в начало змеи
+                snakeBody.insert(snakeBody.begin(), newHeadPosition);
 
-// 4. Проверяем, съели ли мы еду
-if (newHeadPosition == foodPosition) {
-    // Еда съедена!
-    // Хвост не удаляем, змея выросла.
-    // Генерируем новую позицию для еды.
-    // Нужно убедиться, что еда не появится на теле змеи.
-    do {
-        foodPosition = {distX(randomEngine), distY(randomEngine)};
-    } while (std::find(snakeBody.begin(), snakeBody.end(), foodPosition) != snakeBody.end());
+                // 4. Проверяем, съели ли мы еду
+                if (newHeadPosition == foodPosition) {
+                    // Еда съедена!
+                    // Хвост не удаляем, змея выросла.
+                    // Генерируем новую позицию для еды.
+                    // Нужно убедиться, что еда не появится на теле змеи.
+                    do {
+                        foodPosition = {distX(randomEngine), distY(randomEngine)};
+                    } while (std::find(snakeBody.begin(), snakeBody.end(), foodPosition) != snakeBody.end());
 
-} else {
-    // Еду не съели, просто движемся.
-    // Удаляем хвост.
-    snakeBody.pop_back();
-}
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+                } else {
+                    // Еду не съели, просто движемся.
+                    // Удаляем хвост.
+                    snakeBody.pop_back();
+                }
+            }
 
-}
+            // --- ПРОВЕРКА ГРАНИЦ ОКНА ---
+            sf::Vector2i& head = snakeBody.front(); // Получаем ссылку на голову, чтобы ее можно было изменить
 
-        // --- ВСТАВЬТЕ ЭТОТ БЛОК ---
-// --- ПРОВЕРКА ГРАНИЦ ОКНА ---
-sf::Vector2i& head = snakeBody.front(); // Получаем ссылку на голову, чтобы ее можно было изменить
+            // Вычисляем размеры нашей сетки в клетках
+            const int gridWidth = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE;
+            const int gridHeight = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE;
 
-// Вычисляем размеры нашей сетки в клетках
-const int gridWidth = GameConfig::WINDOW_WIDTH / GameConfig::TILE_SIZE;
-const int gridHeight = GameConfig::WINDOW_HEIGHT / GameConfig::TILE_SIZE;
+            // Проверяем и корректируем координаты головы
+            if (head.x < 0) {
+                head.x = gridWidth - 1; // Если ушли влево, появляемся справа
+            } else if (head.x >= gridWidth) {
+                head.x = 0; // Если ушли вправо, появляемся слева
+            }
 
-// Проверяем и корректируем координаты головы
-if (head.x < 0) {
-    head.x = gridWidth - 1; // Если ушли влево, появляемся справа
-} else if (head.x >= gridWidth) {
-    head.x = 0; // Если ушли вправо, появляемся слева
-}
+            if (head.y < 0) {
+                head.y = gridHeight - 1; // Если ушли вверх, появляемся снизу
+            } else if (head.y >= gridHeight) {
+                head.y = 0; // Если ушли вниз, появляемся сверху
+            }
 
-if (head.y < 0) {
-    head.y = gridHeight - 1; // Если ушли вверх, появляемся снизу
-} else if (head.y >= gridHeight) {
-    head.y = 0; // Если ушли вниз, появляемся сверху
-}
-// --- КОНЕЦ НОВОГО БЛОКА ---
+            // --- ПРОВЕРКА СТОЛКНОВЕНИЙ ---
+            const sf::Vector2i& headPos = snakeBody.front();
+            // Проходим по всему телу, начиная со второго сегмента (индекс 1)
+            for (size_t i = 1; i < snakeBody.size(); ++i) {
+                if (headPos == snakeBody[i]) {
+                    // Столкновение! Голова находится там же, где и один из сегментов тела.
+                    isGameOver = true;
+                    break; // Выходим из цикла, т.к. игра уже окончена
+                }
+            }
+        }
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
        // --- ОТРИСОВКА ---
 window.clear();
@@ -153,6 +164,15 @@ renderer.drawFood(foodPosition.x * GameConfig::TILE_SIZE, foodPosition.y * GameC
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 window.display();
+
+        // --- НОВЫЙ БЛОК: ЗАВЕРШЕНИЕ ИГРЫ ---
+        if (isGameOver) {
+            // Ждем 2 секунды
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+            // Закрываем окно
+            window.close();
+        }
+        // --- КОНЕЦ НОВОГО БЛОКА ---
     }
 
     return 0;
